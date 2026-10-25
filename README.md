@@ -1,6 +1,7 @@
 # FitNesse Execution Report
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.tortaje/fitnesse-modern-report)](https://central.sonatype.com/artifact/io.github.tortaje/fitnesse-modern-report)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 A [FitNesse](https://fitnesse.org) plugin that turns a suite run into a modern, self-contained HTML dashboard: success rate, suite timeline, filterable scenario table, focused error details, live Java heap / CPU charts of the application under test, one-click rerun of failures and a portable ZIP export.
 
