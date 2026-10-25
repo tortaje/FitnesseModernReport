@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FitNesse Execution Report</title>
+    <script>
+        // runs before the page is painted, so the progress screen never flashes in the wrong theme
+        (function () {
+            var saved = null;
+            try { saved = localStorage.getItem('theme'); } catch (e) {}
+            if (saved === 'dark' || (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+        var progressClock = null;
+        var progressStartedAt = Date.now();
+        function progressElement(id) { return document.getElementById(id); }
+        function formatElapsed(ms) {
+            var s = Math.floor(ms / 1000);
+            return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+        }
+        function startProgressClock() {
+            if (!progressElement('progressOverlay')) return;
+            var page = new URLSearchParams(location.search).get('page');
+            if (page) progressElement('progressTitle').textContent = page;
+            progressClock = setInterval(function () {
+                var elapsed = progressElement('progressElapsed');
+                if (elapsed) elapsed.textContent = formatElapsed(Date.now() - progressStartedAt);
+            }, 500);
+        }
+        function stopProgressClock() { if (progressClock) { clearInterval(progressClock); progressClock = null; } }
+        function updateProgress(done, total) {
+            var bar = progressElement('progressBar'), text = progressElement('progressText');
+            if (!bar || !text) return;
+            if (total > 0) {
+                var pct = Math.min(100, Math.round(done / total * 100));
+                bar.style.width = pct + '%';
+                bar.classList.remove('animate-pulse');
+                text.textContent = done + ' / ' + total + ' tests (' + pct + '%)';
+            } else {
+                bar.style.width = '100%';
+                bar.classList.add('animate-pulse');
+                text.textContent = 'Running the suite...';
+            }
+        }
+        function showError(message, retryUrl) {
+            stopProgressClock();
+            var overlay = progressElement('progressOverlay');
+            if (!overlay) return;
+            progressElement('progressSpinner').classList.add('hidden');
+            progressElement('progressLabel').textContent = 'Execution failed';
+            progressElement('progressTitle').textContent = 'Unable to fetch execution results';
+            progressElement('progressMeter').classList.add('hidden');
+            var hint = progressElement('progressHint');
+            hint.textContent = message;
+            hint.className = 'p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 rounded-xl text-sm font-mono whitespace-pre-wrap break-words';
+            var retry = progressElement('progressRetry');
+            retry.setAttribute('href', retryUrl);
+            retry.classList.remove('hidden');
+            retry.classList.add('inline-flex');
+        }
+    </script>
+    <script>/*__TAILWIND__*/</script>
+    <style type="text/tailwindcss">
+        @custom-variant dark (&:where(.dark, .dark *));
+    </style>
+    <script>/*__JSZIP__*/</script>
+    <style>
+        /* --- STYLES MODE CLAIR (Règles strictes & couleurs douces) --- */
+        body {
+            background-color: #f8fafc !important;
+            color: #0f172a !important;
+        }
+
+        .card-theme {
+            background-color: #ffffff !important;
+            border-color: #e2e8f0 !important;
+            color: #0f172a !important;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .text-muted {
+            color: #64748b !important;
+        }
+
+        .border-theme {
+            border-color: #e2e8f0 !important;
+        }
+
+        .border-row-theme {
+            border-color: #f1f5f9 !important; /* Lignes du tableau ultra-douces */
+        }
+
+        .input-theme {
+            background-color: #f8fafc !important;
+            border-color: #e2e8f0 !important;
+            color: #0f172a !important;
+        }
+
+        .input-theme::placeholder {
+            color: #94a3b8 !important;
+        }
+
+        .hover-row:hover {
+            background-color: rgba(241, 245, 249, 0.7) !important;
+        }
+
+        .bg-subtle {
+            background-color: #f8fafc !important;
+            border-color: #e2e8f0 !important;
+        }
+
+        .bg-graph-box {
+            background-color: #ffffff !important;
+            border-color: #e2e8f0 !important;
+        }
+
+        .tag-pill {
+            background-color: #f1f5f9 !important;
+            color: #475569 !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+        .tag-critical {
+            background-color: #fff1f2 !important;
+            color: #be123c !important;
+            border: 1px solid #fecdd3 !important;
+        }
+        .dark .tag-critical {
+            background-color: rgba(76, 5, 25, 0.4) !important;
+            color: #fda4af !important;
+            border: 1px solid #881337 !important;
+        }
+
+        /* --- OVERRIDES STRICTS MODE SOMBRE (.dark) --- */
+        .dark body {
+            background-color: #020617 !important;
+            color: #f8fafc !important;
+        }
+
+        .dark .card-theme {
+            background-color: #0f172a !important;
+            border-color: #1e293b !important;
+            color: #f8fafc !important;
+            box-shadow: none;
+        }
+
+        .dark .text-muted {
+            color: #94a3b8 !important;
+        }
+
+        .dark .border-theme, .dark .border-row-theme {
+            border-color: #1e293b !important;
+        }
+
+        .dark .input-theme {
+            background-color: #1e293b !important;
+            border-color: #334155 !important;
+            color: #f8fafc !important;
+        }
+
+        .dark .input-theme::placeholder {
+            color: #64748b !important;
+        }
+
+        .dark .hover-row:hover {
+            background-color: rgba(30, 41, 59, 0.5) !important;
+        }
+
+        .dark .bg-subtle {
+            background-color: rgba(15, 23, 42, 0.5) !important;
+            border-color: #1e293b !important;
+        }
+
+        .dark .bg-graph-box {
+            background-color: #020617 !important;
+            border-color: #1e293b !important;
+        }
+
+        .dark .tag-pill {
+            background-color: #1e293b !important;
+            color: #cbd5e1 !important;
+            border: 1px solid #334155 !important;
+        }
+        
+        /* Row separators: explicit colours so divide-y never falls back to the text colour */
+        #tableBody > tr + tr { border-top: 1px solid #f1f5f9; }
+        .dark #tableBody > tr + tr { border-top-color: rgba(30, 41, 59, 0.6); }
+        #reportTable thead tr { border-bottom: 1px solid #e2e8f0; }
+        .dark #reportTable thead tr { border-bottom-color: rgba(30, 41, 59, 0.8); }
+
+        /* Transitions fluides */
+        body, .card-theme, input, select, button, .bg-graph-box, .tag-pill {
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+    </style>
+    <script>
+        // Pages exported to the ZIP come from the wiki, which any editor can write to: they are made inert.
+        function sanitizeExecutionPage(doc) {
+            doc.querySelectorAll('script, iframe, frame, frameset, object, embed, applet, base, meta[http-equiv]').forEach(n => n.remove());
+            // comments can hide markup meant for legacy browsers (conditional comments)
+            const walker = doc.createTreeWalker(doc, NodeFilter.SHOW_COMMENT);
+            [...(function* () { while (walker.nextNode()) yield walker.currentNode; })()].forEach(n => n.remove());
+            const blocked = /^(javascript|vbscript):/i, blockedLinks = /^(javascript|vbscript|data):/i;
+            doc.querySelectorAll('*').forEach(el => {
+                [...el.attributes].forEach(attr => {
+                    const name = attr.name.toLowerCase();
+                    const value = attr.value.replace(/[\s\u0000-\u001f]/g, '');
+                    if (name.startsWith('on') || (['href', 'src', 'xlink:href', 'srcset', 'poster'].includes(name) && blocked.test(value))
+                        || (['href', 'xlink:href', 'action', 'formaction', 'data'].includes(name) && blockedLinks.test(value))) {
+                        el.removeAttribute(attr.name);
+                    }
+                });
+            });
+            const csp = doc.createElement('meta');
+            csp.setAttribute('http-equiv', 'Content-Security-Policy');
+            csp.setAttribute('content', "default-src 'none'; style-src 'unsafe-inline'; img-src http: https: data:; font-src data:");
+            doc.head.prepend(csp);
+        }
+    </script>
+</head>
+<body class="font-sans antialiased min-h-screen p-8">
+    <div id="progressOverlay" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-50 dark:bg-slate-950">
+        <div class="card-theme border rounded-2xl p-8 w-full max-w-xl shadow-xs space-y-6">
+            <div class="flex items-center gap-4">
+                <svg id="progressSpinner" class="w-8 h-8 shrink-0 animate-spin text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <div class="min-w-0">
+                    <p id="progressLabel" class="text-xs uppercase tracking-wider text-muted font-bold">Running test suite</p>
+                    <h1 id="progressTitle" class="text-xl font-bold break-all">Execution Report</h1>
+                </div>
+            </div>
+            <div id="progressMeter">
+                <div class="flex justify-between items-baseline text-sm">
+                    <span id="progressText" class="font-semibold">Starting...</span>
+                    <span id="progressElapsed" class="font-mono text-muted">0:00</span>
+                </div>
+                <div class="w-full bg-slate-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden mt-2">
+                    <div id="progressBar" class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: 0%;"></div>
+                </div>
+            </div>
+            <p id="progressHint" class="text-muted text-xs">The report appears here as soon as the suite has finished. Please keep this page open.</p>
+            <a id="progressRetry" href="#" class="hidden bg-slate-900 hover:bg-slate-700 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 h-10 px-4 items-center rounded-xl text-sm font-semibold transition">Retry</a>
+        </div>
+    </div>
+    <div class="max-w-6xl mx-auto space-y-6">
+
+        <header class="card-theme flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border p-6 rounded-2xl shadow-xs">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span id="statusDot" class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                    <span id="suiteLabel" class="text-xs uppercase tracking-wider text-muted font-bold">FitNesse Test Suite</span>
+                </div>
+                <h1 id="reportTitle" class="text-2xl font-bold mt-1">Execution Report</h1>
+                <p id="reportSubtitle" class="text-muted text-sm mt-0.5"></p>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button id="themeToggleBtn" class="card-theme hover:bg-slate-50 dark:hover:bg-slate-800 border h-10 w-10 rounded-xl text-slate-600 dark:text-slate-300 cursor-pointer flex items-center justify-center shadow-2xs transition" title="Toggle Dark/Light Theme">
+                    <svg id="sunIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                    <svg id="moonIcon" class="w-5 h-5 block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                    </svg>
+                </button>
+
+                <button id="rerunFailedBtn" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 dark:text-rose-300 dark:border-rose-900 disabled:bg-slate-100 disabled:hover:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 dark:disabled:bg-slate-800/60 dark:disabled:text-slate-500 dark:disabled:border-slate-700 disabled:cursor-not-allowed h-10 px-4 rounded-xl text-sm font-semibold cursor-pointer flex items-center gap-2 shadow-2xs transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span id="rerunLabel">Rerun Failed (<span id="failedCountBadge">0</span>)</span>
+                </button>
+
+                <button id="exportZipBtn" class="bg-slate-900 hover:bg-slate-700 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 border border-slate-900 dark:border-slate-100 h-10 px-4 rounded-xl text-sm font-semibold cursor-pointer flex items-center gap-2.5 shadow-2xs transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    <span>Export Zip</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="card-theme border p-6 rounded-2xl shadow-xs flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-muted text-sm font-medium">Success Rate (Global)</p>
+                    <div class="flex items-baseline gap-2 mt-2"><span id="kpiRate" class="text-4xl font-extrabold">N/A</span></div>
+                </div>
+                <span class="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg>
+                </span>
+            </div>
+            <div class="card-theme border p-6 rounded-2xl shadow-xs flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-muted text-sm font-medium">Passed Tests</p>
+                    <p id="kpiPassed" class="text-4xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-2">N/A</p>
+                </div>
+                <span class="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-900">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </span>
+            </div>
+            <div class="card-theme border p-6 rounded-2xl shadow-xs flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-muted text-sm font-medium">Detected Anomalies</p>
+                    <p id="kpiAnomalies" class="text-4xl font-extrabold text-rose-600 dark:text-rose-400 mt-2">N/A</p>
+                </div>
+                <span class="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-100 dark:border-rose-900">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"></path></svg>
+                </span>
+            </div>
+        </div>
+
+        <div class="card-theme border rounded-2xl p-6 space-y-4 shadow-xs">
+            <div class="flex justify-between items-center border-theme border-b pb-4">
+                <div>
+                    <h2 class="font-bold text-lg">Suite-Level Execution Timeline</h2>
+                    <p class="text-muted text-xs mt-0.5">Aggregated duration per module / test suite</p>
+                </div>
+                <div class="flex items-center gap-4 text-xs font-medium text-muted">
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Passed Suite</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Failed Suite</span>
+                </div>
+            </div>
+            <div id="ganttScale" class="relative pt-2 pb-1 text-muted text-xs font-mono flex justify-between border-theme border-b"></div>
+            <div id="ganttBars" class="space-y-3 pt-2"></div>
+        </div>
+
+        <div class="card-theme border rounded-2xl p-6 space-y-4 shadow-xs">
+            <div class="border-theme border-b pb-4">
+                <h2 class="font-bold text-lg flex items-center gap-2"><span>⚡ Infrastructure Telemetry & Resource Profiling</span></h2>
+                <p id="telemetrySubtitle" class="text-muted text-xs mt-0.5">Target application metrics during the test execution cycle</p>
+            </div>
+<div id="telemetry" class="space-y-6"></div>
+        </div>
+
+        <div class="card-theme border rounded-2xl overflow-hidden space-y-0 shadow-xs">
+            <div class="p-6 border-theme border-b flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h2 class="font-bold text-lg">All Scenarios (<span id="visibleCount">0</span> items)</h2>
+                    <p class="text-muted text-xs mt-0.5">Filter by scenario name, tag or status</p>
+                </div>
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                    <div class="relative flex-1 md:w-64">
+                        <input type="text" id="searchInput" placeholder="Search scenario or tag (#smoke)..." class="input-theme border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100 transition">
+                    </div>
+                    <select id="statusFilter" class="input-theme border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100 transition cursor-pointer">
+                        <option value="ALL">All Statuses</option>
+                        <option value="PASS">Pass</option>
+                        <option value="FAIL">Fail</option>
+                        <option value="ERROR">Error</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="tagBar" class="px-6 py-3 bg-subtle border-theme border-b flex items-center gap-2 overflow-x-auto text-xs font-medium">
+                <span class="text-muted uppercase tracking-wider font-bold text-[10px] mr-1">Quick Tags:</span>
+            </div>
+
+            <div class="max-h-[500px] overflow-y-auto overflow-x-hidden relative">
+                <table class="w-full table-fixed text-left border-collapse" id="reportTable">
+                    <colgroup><col><col class="w-28"><col class="w-56"></colgroup>
+                    <thead class="sticky top-0 card-theme z-10">
+                        <tr class="text-muted text-xs uppercase tracking-wider border-theme border-b">
+                            <th id="th-sort-0" class="py-3 px-6 font-semibold cursor-pointer transition select-none">Page / Scenario & Tags <span id="sort-icon-0" class="ml-1 text-slate-400">↕</span></th>
+                            <th id="th-sort-1" class="py-3 px-6 font-semibold cursor-pointer transition select-none">Duration <span id="sort-icon-1" class="ml-1 text-slate-400">↕</span></th>
+                            <th class="py-3 px-6 font-semibold">Status / Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm" id="tableBody"></tbody>
+                </table>
+                <p id="emptyState" class="hidden p-6 text-center text-sm text-muted"></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="errorDrawer" class="fixed inset-0 z-50 hidden overflow-hidden">
+        <div id="drawerBackdrop" class="absolute inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 transition-opacity duration-300"></div>
+        <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
+            <div id="drawerPanel" class="card-theme w-screen max-w-lg shadow-2xl border-l transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+                <div class="p-6 bg-slate-900 dark:bg-slate-950 text-white flex items-center justify-between border-b border-slate-800">
+                    <div>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-rose-400">Assertion Failure Inspection</span>
+                        <h3 id="drawerTitle" class="text-lg font-bold mt-1 text-slate-100">Scenario Name</h3>
+                    </div>
+                    <button id="drawerCloseBtn" class="text-slate-400 hover:text-white p-2 rounded-lg transition cursor-pointer text-xl">✕</button>
+                </div>
+                <div class="p-6 overflow-y-auto flex-1 space-y-5">
+                    <div>
+                        <h4 id="drawerHeading" class="text-muted text-xs font-bold uppercase tracking-wider mb-2">Error message / SLiM assertion</h4>
+                        <div id="drawerMessage" class="space-y-3"></div>
+                    </div>
+                </div>
+                <div class="p-4 border-theme border-t bg-subtle flex justify-end">
+                    <button id="drawerCloseFooterBtn" class="bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition cursor-pointer">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function startReport(initialData, initialMetrics) {
+            stopProgressClock();
+            var overlay = document.getElementById('progressOverlay');
+            if (overlay) overlay.remove();
+            const $ = id => document.getElementById(id);
+            const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            let data = initialData;
+            let metrics = initialMetrics;
+            const page = new URLSearchParams(location.search).get('page') || '';
+            const fmtMs = ms => ms < 1000 ? Math.round(ms) + 'ms' : ms >= 60000 ? Math.floor(ms / 60000) + 'm ' + Math.round(ms % 60000 / 1000) + 's' : (ms / 1000).toFixed(ms >= 10000 ? 0 : 1) + 's';
+            // --- Theme ---
+            const html = document.documentElement;
+            function applyTheme(isDark) {
+                html.classList.toggle('dark', isDark);
+                $('sunIcon').classList.toggle('hidden', !isDark);
+                $('moonIcon').classList.toggle('hidden', isDark);
+                try { localStorage.setItem('theme', isDark ? 'dark' : 'light'); } catch (e) {}
+            }
+            let saved = null;
+            try { saved = localStorage.getItem('theme'); } catch (e) {}
+            applyTheme(saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches));
+            $('themeToggleBtn').addEventListener('click', () => applyTheme(!html.classList.contains('dark')));
+
+            const tagPill = 'tag-pill inline-block text-[11px] px-2 py-0.5 rounded font-mono font-medium';
+            const critical = 'tag-critical inline-block text-[11px] px-2 py-0.5 rounded font-mono font-medium';
+            const badges = {
+                Pass: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900',
+                Fail: 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300 border-rose-200 dark:border-rose-900',
+                Error: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900'
+            };
+            const tagClasses = {
+                active: 'tag-filter-btn px-2.5 py-1 rounded-lg border border-slate-900 dark:border-slate-100 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 cursor-pointer transition',
+                idle: 'tag-filter-btn card-theme px-2.5 py-1 rounded-lg border hover:opacity-85 cursor-pointer transition',
+                critical: 'tag-filter-btn bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-900 px-2.5 py-1 rounded-lg hover:opacity-85 cursor-pointer transition'
+            };
+            const tableBody = $('tableBody');
+            let selectedTag = 'ALL';
+            const sort = { col: null, asc: true };
+            let subtitleNote = '';
+
+            function render() {
+                const failedCount = data.filter(d => d.status !== 'Pass').length;
+                const passedCount = data.length - failedCount;
+                const totalMs = data.reduce((sum, d) => sum + d.ms, 0);
+
+                // Header and KPIs
+                $('reportTitle').textContent = 'Execution Report' + (page ? ': ' + page : '');
+                $('suiteLabel').textContent = 'FitNesse Test Suite (' + data.length + ' Scenarios)';
+                $('reportSubtitle').textContent = data.length ? 'Executed in ' + fmtMs(totalMs) + ' total' + subtitleNote : 'No results — open this report with &page=<SuiteName>';
+                $('statusDot').className = 'w-3 h-3 rounded-full ' + (failedCount ? 'bg-rose-500' : 'bg-emerald-500');
+                $('kpiRate').textContent = data.length ? (passedCount / data.length * 100).toFixed(1) + '%' : 'N/A';
+                $('kpiPassed').textContent = data.length ? passedCount + ' / ' + data.length : 'N/A';
+                $('kpiAnomalies').textContent = data.length ? failedCount : 'N/A';
+                const countBadge = $('failedCountBadge');
+                if (countBadge) countBadge.textContent = failedCount;
+                const rerunDisabled = !failedCount || !page || rerunning;
+                $('rerunFailedBtn').disabled = rerunDisabled;
+
+                // Suite-level timeline (scenarios grouped by parent page)
+                const suites = new Map();
+                data.forEach(d => {
+                    const key = d.name.includes('.') ? d.name.slice(0, d.name.lastIndexOf('.')) : (page || '(root)');
+                    const g = suites.get(key) || { name: key, count: 0, ms: 0, failed: false };
+                    g.count++; g.ms += d.ms; g.failed = g.failed || d.status !== 'Pass';
+                    suites.set(key, g);
+                });
+                let offset = 0;
+                const span = totalMs || 1;
+                $('ganttBars').innerHTML = [...suites.values()].map(g => {
+                    const margin = offset / span * 100, width = Math.max(g.ms / span * 100, 0.5);
+                    offset += g.ms;
+                    return '<div class="space-y-1"><div class="flex justify-between text-xs font-medium"><span class="' + (g.failed ? 'font-semibold' : '') + '">' + esc(g.name) + ' (' + g.count + ' tests)</span>'
+                        + '<span class="' + (g.failed ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-muted') + ' font-mono">' + fmtMs(g.ms) + '</span></div>'
+                        + '<div class="w-full bg-slate-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden relative"><div class="' + (g.failed ? 'bg-rose-500' : 'bg-emerald-500')
+                        + ' h-full rounded-full transition-all duration-500" style="margin-left: ' + margin.toFixed(1) + '%; width: ' + width.toFixed(1) + '%;"></div></div></div>';
+                }).join('');
+                $('ganttScale').innerHTML = [0, 0.25, 0.5, 0.75, 1].map(f => '<span>' + fmtMs(totalMs * f) + (f === 1 ? ' (Total)' : '') + '</span>').join('');
+
+                // Quick tags (keep the selection if the tag still exists)
+                const allTags = [...new Set(data.flatMap(d => d.tags))].sort();
+                if (selectedTag !== 'ALL' && !allTags.some(t => '#' + t === selectedTag)) selectedTag = 'ALL';
+                $('tagBar').innerHTML = '<span class="text-muted uppercase tracking-wider font-bold text-[10px] mr-1">Quick Tags:</span>'
+                    + ['ALL', ...allTags].map(t => {
+                        const value = t === 'ALL' ? 'ALL' : '#' + t;
+                        const cls = value === selectedTag ? tagClasses.active : t.toLowerCase() === 'critical' ? tagClasses.critical : tagClasses.idle;
+                        return '<button class="' + cls + '" data-tag="' + esc(value) + '">' + (t === 'ALL' ? 'All' : '#' + esc(t)) + '</button>';
+                    }).join('');
+
+                // Table (sorted view; data-index points back into data)
+                const entries = data.map((d, i) => ({ d, i }));
+                if (sort.col !== null) {
+                    entries.sort((a, b) => {
+                        const r = sort.col === 0 ? a.d.name.localeCompare(b.d.name) : a.d.ms - b.d.ms;
+                        return sort.asc ? r : -r;
+                    });
+                }
+                $('sort-icon-0').textContent = sort.col === 0 ? (sort.asc ? '↑' : '↓') : '↕';
+                $('sort-icon-1').textContent = sort.col === 1 ? (sort.asc ? '↑' : '↓') : '↕';
+                tableBody.innerHTML = entries.map(({ d, i }) => {
+                    const badge = '<span class="' + badges[d.status] + ' text-xs px-2.5 py-1 rounded-full font-medium border">' + esc(d.status) + '</span>';
+                    const action = d.status === 'Pass' ? badge : '<div class="flex items-center gap-3">' + badge
+                        + '<button class="quick-view-btn card-theme text-xs border px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 cursor-pointer shadow-2xs" data-index="' + i + '"><span>🔍</span> Details</button></div>';
+                    const tags = d.tags.map(t => '<span class="' + (t.toLowerCase() === 'critical' ? critical : tagPill) + '">#' + esc(t) + '</span>').join('');
+                    // the run's execution page (FitNesse test history), not the editable wiki page
+                    const href = d.link ? '/' + encodeURI(d.link) : page ? '/' + encodeURI(page + '.' + d.name) : '#';
+                    return '<tr class="hover-row transition scenario-row" data-status="' + d.status.toUpperCase() + '" data-tags="' + esc(d.tags.map(t => '#' + t).join(' ')) + '">'
+                        + '<td class="py-4 px-6"><div class="break-all"><a href="' + href + '" class="text-indigo-600 dark:text-indigo-400 hover:underline scenario-name font-medium">' + esc(d.name) + '</a></div>'
+                        + '<div class="flex flex-wrap items-center gap-1.5 mt-1">' + tags + '</div></td>'
+                        + '<td class="py-4 px-6 text-muted font-mono">' + fmtMs(d.ms) + '</td><td class="py-4 px-6">' + action + '</td></tr>';
+                }).join('');
+                $('emptyState').textContent = data.length ? '' : 'No scenarios to display.';
+                $('emptyState').classList.toggle('hidden', data.length > 0);
+                renderTelemetry();
+                filterTable();
+            }
+
+            // --- Infrastructure telemetry (samples polled from the target application while the suite ran) ---
+            const fmtBytes = b => b >= 1073741824 ? (b / 1073741824).toFixed(2) + ' GB' : Math.round(b / 1048576) + ' MB';
+            const fmtClock = ms => { const s = Math.round(ms / 1000); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+            function chart(samples, key, yMax, color, dashed) {
+                const maxT = samples[samples.length - 1].t || 1;
+                const x = s => samples.length === 1 ? 400 : s.t / maxT * 800;
+                const y = s => 55 - Math.min(Math.max(s[key], 0) / yMax, 1) * 45;
+                const line = samples.map((s, i) => (i ? 'L ' : 'M ') + x(s).toFixed(1) + ' ' + y(s).toFixed(1)).join(' ');
+                const area = line + ' L ' + x(samples[samples.length - 1]).toFixed(1) + ' 60 L ' + x(samples[0]).toFixed(1) + ' 60 Z';
+                const peak = samples.reduce((a, b) => b[key] > a[key] ? b : a);
+                const px = x(peak), label = px > 700 ? 'text-anchor="end"' : px < 60 ? 'text-anchor="start"' : 'text-anchor="middle"';
+                return '<svg viewBox="0 0 800 60" class="w-full h-full overflow-visible">'
+                    + '<line x1="0" y1="10" x2="800" y2="10" class="stroke-slate-200 dark:stroke-slate-800" stroke-dasharray="3"/>'
+                    + '<line x1="0" y1="35" x2="800" y2="35" class="stroke-slate-200 dark:stroke-slate-800" stroke-dasharray="3"/>'
+                    + (samples.length > 1 ? '<path d="' + area + '" fill="' + color + '" fill-opacity="0.1"/>'
+                        + '<path d="' + line + '" fill="none" stroke="' + color + '" stroke-width="2.5"' + (dashed ? ' stroke-dasharray="4 2"' : '') + ' stroke-linejoin="round"/>' : '')
+                    + '<circle cx="' + px.toFixed(1) + '" cy="' + y(peak).toFixed(1) + '" r="4" fill="' + color + '"/>'
+                    + '<text x="' + px.toFixed(1) + '" y="' + Math.max(y(peak) - 8, 8).toFixed(1) + '" ' + label + ' font-size="10" font-family="monospace" font-weight="bold" fill="' + color + '">'
+                    + (key === 'cpu' ? Math.round(peak.cpu * 100) + '% CPU' : fmtBytes(peak.heapUsed) + ' Peak') + '</text></svg>';
+            }
+            function renderTelemetry() {
+                const box = $('telemetry');
+                const note = text => { box.innerHTML = '<div class="bg-graph-box border rounded-xl p-6 text-sm text-muted text-center">' + esc(text) + '</div>'; };
+                if (!metrics) return note('N/A — no metrics source configured. Set report.metrics.url in plugins.properties.');
+                const samples = metrics.samples || [];
+                if (!samples.length) return note('N/A — metrics could not be read from the target application' + (metrics.error ? ': ' + metrics.error : '.'));
+                $('telemetrySubtitle').textContent = 'Target application metrics: ' + samples.length + ' samples every ' + fmtMs(metrics.intervalMs) + ' over ' + fmtMs(samples[samples.length - 1].t) + ' of execution';
+                const heapPeak = Math.max(...samples.map(s => s.heapUsed));
+                const heapMax = samples.map(s => s.heapMax).find(m => m > 0);
+                const cpuSamples = samples.filter(s => s.cpu >= 0);
+                const heapBlock = '<div class="space-y-2"><div class="flex justify-between items-center text-xs font-semibold"><span class="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">'
+                    + '<span class="w-3 h-3 rounded-full bg-indigo-500 inline-block"></span>Target Application Java Heap Memory</span>'
+                    + '<span class="font-mono text-muted">Peak: ' + fmtBytes(heapPeak) + (heapMax ? ' / ' + fmtBytes(heapMax) + ' limit' : '') + '</span></div>'
+                    + '<div class="relative w-full h-24 bg-graph-box border rounded-xl p-2">' + chart(samples, 'heapUsed', heapMax || heapPeak * 1.25, '#6366f1', false) + '</div></div>';
+                const cpuBlock = cpuSamples.length ? '<div class="space-y-2"><div class="flex justify-between items-center text-xs font-semibold"><span class="flex items-center gap-2 text-amber-600 dark:text-amber-400">'
+                    + '<span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>Target Application CPU Usage (%)</span>'
+                    + '<span class="font-mono text-muted">Peak: ' + Math.round(Math.max(...cpuSamples.map(s => s.cpu)) * 100) + '% utilization</span></div>'
+                    + '<div class="relative w-full h-24 bg-graph-box border rounded-xl p-2">' + chart(cpuSamples, 'cpu', 1, '#f59e0b', true) + '</div></div>' : '';
+                const last = samples[samples.length - 1].t;
+                const axis = '<div class="flex justify-between items-center text-[11px] text-muted font-mono pt-2 border-theme border-t">'
+                    + [0, 0.25, 0.5, 0.75, 1].map(f => '<span>' + fmtClock(last * f) + (f === 0 ? ' (Start)' : f === 1 ? ' (End)' : '') + '</span>').join('') + '</div>';
+                box.innerHTML = heapBlock + cpuBlock + axis;
+            }
+
+            // --- Drawer ---
+            const drawer = $('errorDrawer'), backdrop = $('drawerBackdrop'), panel = $('drawerPanel');
+            function closeDrawer() {
+                backdrop.classList.replace('opacity-100', 'opacity-0');
+                panel.classList.replace('translate-x-0', 'translate-x-full');
+                setTimeout(() => drawer.classList.add('hidden'), 300);
+            }
+            backdrop.addEventListener('click', closeDrawer);
+            $('drawerCloseBtn').addEventListener('click', closeDrawer);
+            $('drawerCloseFooterBtn').addEventListener('click', closeDrawer);
+            document.addEventListener('click', e => {
+                const btn = e.target.closest('.quick-view-btn');
+                if (!btn) return;
+                const d = data[Number(btn.dataset.index)];
+                $('drawerTitle').textContent = d.name;
+                const errors = (d.error || '').split('\n\n').filter(Boolean);
+                $('drawerHeading').textContent = errors.length > 1 ? errors.length + ' errors / SLiM assertions' : 'Error message / SLiM assertion';
+                $('drawerMessage').innerHTML = (errors.length ? errors : ['No error detail available.']).map(e =>
+                    '<div class="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 rounded-xl text-sm font-mono whitespace-pre-wrap break-words leading-relaxed">' + esc(e) + '</div>').join('');
+                drawer.classList.remove('hidden');
+                requestAnimationFrame(() => {
+                    backdrop.classList.replace('opacity-0', 'opacity-100');
+                    panel.classList.replace('translate-x-full', 'translate-x-0');
+                });
+            });
+
+            // --- Filtering ---
+            function filterTable() {
+                const term = $('searchInput').value.toLowerCase().trim(), status = $('statusFilter').value;
+                let visible = 0;
+                document.querySelectorAll('.scenario-row').forEach(row => {
+                    const name = row.querySelector('.scenario-name').textContent.toLowerCase(), tags = row.dataset.tags.toLowerCase();
+                    const show = (name.includes(term) || tags.includes(term)) && (status === 'ALL' || row.dataset.status === status)
+                        && (selectedTag === 'ALL' || tags.split(' ').includes(selectedTag.toLowerCase()));
+                    row.style.display = show ? '' : 'none';
+                    if (show) visible++;
+                });
+                $('visibleCount').textContent = visible;
+            }
+            $('tagBar').addEventListener('click', e => {
+                const btn = e.target.closest('.tag-filter-btn');
+                if (!btn) return;
+                selectedTag = btn.dataset.tag;
+                render();
+            });
+            $('searchInput').addEventListener('input', filterTable);
+            $('statusFilter').addEventListener('change', filterTable);
+
+            // --- Sorting ---
+            [0, 1].forEach(col => $('th-sort-' + col).addEventListener('click', () => {
+                sort.asc = sort.col === col ? !sort.asc : true;
+                sort.col = col;
+                render();
+            }));
+
+            // --- Rerun failed: re-execute only the failures in the background, then merge the new results into the report ---
+            let rerunning = false;
+            $('rerunFailedBtn').addEventListener('click', async () => {
+                if (rerunning || !page) return;
+                rerunning = true;
+                const label = $('rerunLabel'), original = label.innerHTML;
+                label.textContent = 'Rerunning failed tests...';
+                $('rerunFailedBtn').querySelector('svg').classList.add('animate-spin');
+                render();
+                try {
+                    const rerunPage = page.startsWith('RerunLastFailures_') ? page : 'RerunLastFailures_' + page.replace(/\./g, '-');
+                    const response = await fetch('?responder=ExecutionReport&format=json&page=' + encodeURIComponent(rerunPage) + '&relativeTo=' + encodeURIComponent(page));
+                    const body = await response.json();
+                    if (!response.ok) throw new Error(body.error || 'HTTP ' + response.status);
+                    // Only scenarios that were re-executed are replaced; everything else (passed runs included) stays untouched.
+                    body.forEach(fresh => {
+                        const i = data.findIndex(d => d.name === fresh.name);
+                        if (i >= 0) data[i] = fresh; else data.push(fresh);
+                    });
+                    const stillFailing = body.filter(d => d.status !== 'Pass').length;
+                    subtitleNote = ' — last rerun: ' + body.length + ' re-executed, ' + (body.length - stillFailing) + ' now passing';
+                } catch (err) {
+                    alert('Rerun failed: ' + err.message);
+                } finally {
+                    rerunning = false;
+                    label.innerHTML = original;
+                    $('rerunFailedBtn').querySelector('svg').classList.remove('animate-spin');
+                    render();
+                }
+            });
+
+            // --- Export ZIP (static index.html + report.json + one detail page per scenario) ---
+            render();
+            $('exportZipBtn').addEventListener('click', async () => {
+                const btn = $('exportZipBtn'), original = btn.innerHTML;
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                btn.querySelector('span').textContent = 'Generating Zip...';
+                try {
+                    const zip = new JSZip();
+                    const detailName = n => 'details/' + n.replace(/[^\w.-]/g, '_') + '.html';
+                    const copy = document.documentElement.cloneNode(true);
+                    copy.querySelectorAll('.scenario-name').forEach(a => a.setAttribute('href', detailName(a.textContent.trim())));
+                    // the saved page must show what is on screen now (after a rerun), not what the server first sent
+                    const inline = value => JSON.stringify(value).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+                    copy.querySelectorAll('script').forEach(sc => {
+                        if (sc.textContent.startsWith('startReport(')) sc.textContent = 'startReport(' + inline(data) + ',' + inline(metrics) + ')';
+                        else if (sc.textContent.startsWith('updateProgress(')) sc.remove();
+                    });
+                    zip.file('index.html', '<!DOCTYPE html>\n' + copy.outerHTML);
+                    zip.file('report.json', JSON.stringify(data, null, 2));
+                    // details/: the FitNesse execution page of each run, sanitised, with stylesheets inlined so it opens offline
+                    const cssCache = new Map();
+                    const inlineCss = async url => {
+                        if (!cssCache.has(url)) cssCache.set(url, fetch(url).then(r => r.ok ? r.text() : '').catch(() => ''));
+                        return cssCache.get(url);
+                    };
+                    const summaryPage = d => '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + esc(d.name) + '</title></head><body style="font-family:sans-serif;padding:2rem;"><h1>' + esc(d.name)
+                        + '</h1><p>Status: ' + esc(d.status) + ' — ' + fmtMs(d.ms) + '</p><p>Tags: ' + esc(d.tags.join(', ') || '-') + '</p><pre style="white-space:pre-wrap">' + esc(d.error) + '</pre></body></html>';
+                    const executionPage = async d => {
+                        if (!d.link) return summaryPage(d);
+                        try {
+                            const url = new URL('/' + d.link, location.href).href;
+                            const response = await fetch(url);
+                            if (!response.ok) throw new Error('HTTP ' + response.status);
+                            const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+                            sanitizeExecutionPage(doc);
+                            for (const link of [...doc.querySelectorAll('link[rel~="stylesheet"]')]) {
+                                const css = await inlineCss(new URL(link.getAttribute('href'), url).href);
+                                const style = doc.createElement('style');
+                                style.textContent = css;
+                                link.replaceWith(style);
+                            }
+                            doc.querySelectorAll('img').forEach(img => img.setAttribute('src', new URL(img.getAttribute('src') || '', url).href));
+                            return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+                        } catch (err) {
+                            console.warn('Execution page unavailable for ' + d.name, err);
+                            return summaryPage(d);
+                        }
+                    };
+                    let done = 0, next = 0;
+                    const worker = async () => {
+                        while (next < data.length) {
+                            const d = data[next++];
+                            zip.file(detailName(d.name), await executionPage(d));
+                            btn.querySelector('span').textContent = 'Generating Zip... ' + (++done) + '/' + data.length;
+                        }
+                    };
+                    await Promise.all(Array.from({ length: Math.min(6, data.length) }, worker));
+                    const content = await zip.generateAsync({ type: 'blob' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(content);
+                    a.download = 'fitnesse-report-suite.zip';
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                } catch (err) {
+                    console.error('ZIP generation failed', err);
+                } finally {
+                    btn.innerHTML = original;
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            });
+        }
+        startProgressClock();
+    </script>
+</body>
+</html>
